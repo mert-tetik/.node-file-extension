@@ -19,12 +19,12 @@ std::string processNodeFile(const char* filePath){
     std::string codeFile;
 
     std::string completeToken;
-
     int i = 0;
     int stateChanged = 0;
     for (std::string line; std::getline(filein, line);) 
     {
         completeFile += line;
+        line = removeComments(line);
         
         if(line[0] == '$'){ //Major tokens
             completeToken = processTheWord(line,1);
@@ -357,6 +357,20 @@ private:
                     }
                 }
             }
+    }
+
+    std::string removeComments(std::string line){
+        const char commentChar = '#';
+        int commentIndex;
+        for (size_t i = 0; i < line.size(); i++)
+        {
+            if(line[i] == commentChar){
+                commentIndex = i;
+            }
+        }
+        line.erase(commentIndex,line.size()-1);
+
+        return line;
     }
 };
 
