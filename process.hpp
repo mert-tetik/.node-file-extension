@@ -48,14 +48,19 @@ std::string processNodeFile(const char* filePath){
             processSubToken(line);
             stateChanged = i;
         }
-
-        if((inputDefinitions || outputDefinitions) && i != stateChanged){ //Subsubtokens
-
-        }
-
         if(code && i != stateChanged){
             codeFile += line;
         }
+
+        if((inputDefinitions || outputDefinitions) && i != stateChanged){ //Subsubtokens
+            processSubsubtoken(line);
+        }
+        if(i != stateChanged){
+            inputDefinitions = false;
+            outputDefinitions = false;
+        }
+
+
 
         i++;
     }
@@ -64,187 +69,295 @@ std::string processNodeFile(const char* filePath){
 private:
 
     bool attributes = false;
-bool code = false;
+    bool code = false;
 
-bool inputDefinitions = false;
-bool outputDefinitions = false;
+    bool inputDefinitions = false;
+    bool outputDefinitions = false;
 
 
-bool uniformDefinitions = false;
+    bool uniformDefinitions = false;
 
-struct NodeInput{
-    const char * title; //"Color"
-    const char * element;//"Color picker or range slide bar"
-    const char * type; //Sampler2D, vec3 , vec2 , float 
-};
-struct NodeOutput{
-    const char * title; //"Color"
-    const char * type; //Sampler2D, vec3 , vec2 , float 
-};
-struct Node{
-    std::vector<NodeInput> inputs;
-    std::vector<NodeOutput> outputs;
-    const char* title;
-    
-    float color[4] = {20.f,20.f,20.f,100.f};
-};
+    struct NodeInput{
+        const char * title; //"Color"
+        const char * element;//"Color picker or range slide bar"
+        const char * type; //Sampler2D, vec3 , vec2 , float 
+    };
+    struct NodeOutput{
+        const char * title; //"Color"
+        const char * type; //Sampler2D, vec3 , vec2 , float 
+    };
+    struct Node{
+        std::vector<NodeInput> inputs;
+        std::vector<NodeOutput> outputs;
+        const char* title;
 
-Node node;
+        float color[4] = {20.f,20.f,20.f,100.f};
+    };
 
-struct Code{
-    std::vector<const char *> uniforms;
-    const char * code;
-};
+    Node node;
 
-std::vector<const char *> inputTokens = {
-    "title",
-    "element",
-    "type"
-};
-std::vector<const char *> subTokens = {
-    "input_",
-    "output_",
-    "title",
-    "color",
-    "uniforms"
-};
-std::vector<const char *> tokens = {
-    "attributes",
-    "code"
-};
+    struct Code{
+        std::vector<const char *> uniforms;
+        const char * code;
+    };
 
-std::string processTheWord(std::string line, int startingIndex){
-    int i = startingIndex;
-    
-    std::string word;
 
-    while(line[i] != ' ' || !std::isdigit(line[i])){
-        word += line[i];
-        i++;
+    std::vector<const char *> inputTokens = {
+        "title",
+        "element",
+        "type"
+    };
+    std::vector<const char *> outputTokens = {
+        "title",
+        "type"
+    };
+    std::vector<const char *> subTokens = {
+        "input_",
+        "output_",
+        "title",
+        "color",
+        "uniforms"
+    };
+    std::vector<const char *> tokens = {
+        "attributes",
+        "code"
+    };
+
+    int currentInputIndex;
+    int currentOutputIndex;
+
+    std::string processTheWord(std::string line, int startingIndex){
+        int i = startingIndex;
+
+        std::string word;
+
+        while(line[i] != ' ' || !std::isdigit(line[i])){
+            word += line[i];
+            i++;
+        }
+
+        return word;
     }
 
-    return word;
-}
-
-float* hexToRGBConverter(std::string hex){ //takes hex : #000000 (# is required) 
-	float r;
-	float g;
-	float b;
-	int hexVal[6];
-	for (int i = 1; i < 7; i++)
-	{
-		if(hex[i] == '0'){hexVal[i-1] = 0;}
-		if(hex[i] == '1'){hexVal[i-1] = 1;}
-		if(hex[i] == '2'){hexVal[i-1] = 2;}
-		if(hex[i] == '3'){hexVal[i-1] = 3;}
-		if(hex[i] == '4'){hexVal[i-1] = 4;}
-		if(hex[i] == '5'){hexVal[i-1] = 5;}
-		if(hex[i] == '6'){hexVal[i-1] = 6;}
-		if(hex[i] == '7'){hexVal[i-1] = 7;}
-		if(hex[i] == '8'){hexVal[i-1] = 8;}
-		if(hex[i] == '9'){hexVal[i-1] = 9;}
-		if(hex[i] == 'a'){hexVal[i-1] = 10;}
-		if(hex[i] == 'b'){hexVal[i-1] = 11;}
-		if(hex[i] == 'c'){hexVal[i-1] = 12;}
-		if(hex[i] == 'd'){hexVal[i-1] = 13;}
-		if(hex[i] == 'e'){hexVal[i-1] = 14;}
-		if(hex[i] == 'f'){hexVal[i-1] = 15;}
-	}
-	
-	r = hexVal[0] * 16 + hexVal[1];
-	g = hexVal[2] * 16 + hexVal[3];
-	b = hexVal[4] * 16 + hexVal[5];
-	float result[3] = {r,g,b};
-	return result;
-}
-
-
-bool checkIfArrayContainsTheWord(std::vector<const char *> array, const char * word){
-    bool result;
-
-    std::vector<const char *>::iterator foo;
-    foo = std::find(std::begin(array), std::end(array), word);
-    if (foo != std::end(array)) {
-        result = true;
-    } 
-    else {
-        result = false;
+    float* hexToRGBConverter(std::string hex){ //takes hex : #000000 (# is required) 
+    	float r;
+    	float g;
+    	float b;
+    	int hexVal[6];
+    	for (int i = 1; i < 7; i++)
+    	{
+    		if(hex[i] == '0'){hexVal[i-1] = 0;}
+    		if(hex[i] == '1'){hexVal[i-1] = 1;}
+    		if(hex[i] == '2'){hexVal[i-1] = 2;}
+    		if(hex[i] == '3'){hexVal[i-1] = 3;}
+    		if(hex[i] == '4'){hexVal[i-1] = 4;}
+    		if(hex[i] == '5'){hexVal[i-1] = 5;}
+    		if(hex[i] == '6'){hexVal[i-1] = 6;}
+    		if(hex[i] == '7'){hexVal[i-1] = 7;}
+    		if(hex[i] == '8'){hexVal[i-1] = 8;}
+    		if(hex[i] == '9'){hexVal[i-1] = 9;}
+    		if(hex[i] == 'a'){hexVal[i-1] = 10;}
+    		if(hex[i] == 'b'){hexVal[i-1] = 11;}
+    		if(hex[i] == 'c'){hexVal[i-1] = 12;}
+    		if(hex[i] == 'd'){hexVal[i-1] = 13;}
+    		if(hex[i] == 'e'){hexVal[i-1] = 14;}
+    		if(hex[i] == 'f'){hexVal[i-1] = 15;}
+    	}
+    
+    	r = hexVal[0] * 16 + hexVal[1];
+    	g = hexVal[2] * 16 + hexVal[3];
+    	b = hexVal[4] * 16 + hexVal[5];
+    	float result[3] = {r,g,b};
+    	return result;
     }
-}
 
-void processSubToken(std::string line){
-    if(line[0] == '-' && line[1] != '-'){ //Check subtokens
-        std::string completeToken = processTheWord(line,1);
-        std::string attribute;
 
-        bool properToken = checkIfArrayContainsTheWord(subTokens,completeToken.c_str());
+    bool checkIfArrayContainsTheWord(std::vector<const char *> array, const char * word){
+        bool result;
 
-        const int signIndex = completeToken.size() + 2;
+        std::vector<const char *>::iterator foo;
+        foo = std::find(std::begin(array), std::end(array), word);
+        if (foo != std::end(array)) {
+            result = true;
+        } 
+        else {
+            result = false;
+        }
+    }
 
-        if(properToken){
-            if(line[signIndex] == ':'){
-                attribute = processTheWord(line,signIndex+1);
-                
-                if(completeToken == "title"){
-                    node.title = attribute.c_str();
-                }
-                if(completeToken == "color"){
-                    float* value = hexToRGBConverter(attribute); 
-                    node.color[0] = value[0];//R
-                    node.color[1] = value[1];//G
-                    node.color[2] = value[2];//B
-                }
-                const int maxInputCount = 60;
-                for (size_t i = 0; i < 60; i++)
-                {
-                    if(completeToken == "input_" + std::to_string(i)){
-                        if(node.inputs.size() < i){
-                            std::cout << "ERROR : Wrong index : " << completeToken << std::endl;
+    void processSubToken(std::string line){
+        if(line[0] == '-' && line[1] != '-'){ //Check subtokens
+            std::string completeToken = processTheWord(line,1);
+            std::string attribute;
+
+            bool properToken = checkIfArrayContainsTheWord(subTokens,completeToken.c_str());
+
+            const int signIndex = completeToken.size() + 2;
+
+            if(properToken){
+                if(line[signIndex] == ':'){
+                    attribute = processTheWord(line,signIndex+1);
+
+                    if(completeToken == "title"){
+                        node.title = attribute.c_str();
+                    }
+                    if(completeToken == "color"){
+                        float* value = hexToRGBConverter(attribute); 
+                        node.color[0] = value[0];//R
+                        node.color[1] = value[1];//G
+                        node.color[2] = value[2];//B
+                    }
+                    const int maxInputCount = 60;
+                    for (size_t i = 0; i < 60; i++)
+                    {
+                        if(completeToken == "input_" + std::to_string(i)){
+                            if(node.inputs.size() < i){
+                                std::cout << "ERROR : Wrong index : " << completeToken << std::endl;
+                            }
+                            else{
+                                NodeInput input;
+                                //Default input values
+                                input.element = "none";
+                                input.title = completeToken.c_str();
+                                input.type = "float";
+                                node.inputs.push_back(input);
+
+                                inputDefinitions = true;
+
+                                currentInputIndex = i;
+                            }
                         }
-                        else{
-                            NodeInput input;
-                            //Default input values
-                            input.element = "none";
-                            input.title = completeToken.c_str();
-                            input.type = "float";
-                            node.inputs.push_back(input);
 
-                            inputDefinitions = true;
+                        if(completeToken == "output_" + std::to_string(i)){
+                            if(node.outputs.size() < i){
+                                std::cout << "ERROR : Wrong index : " << completeToken << std::endl;
+                            }
+                            else{
+                                NodeOutput output;
+                                //Default output values
+                                output.title = completeToken.c_str();
+                                output.type = "float";
+                                node.outputs.push_back(output);
+
+                                outputDefinitions = true;
+
+                                currentOutputIndex = i;
+                            }
+
                         }
                     }
-
-                    if(completeToken == "output_" + std::to_string(i)){
-                        if(node.outputs.size() < i){
-                            std::cout << "ERROR : Wrong index : " << completeToken << std::endl;
-                        }
-                        else{
-                            NodeOutput output;
-                            //Default output values
-                            output.title = completeToken.c_str();
-                            output.type = "float";
-                            node.outputs.push_back(output);
-
-                            outputDefinitions = true;
-
-                        }
+                    if(completeToken == "uniforms"){
 
                     }
                 }
-                if(completeToken == "uniforms"){
-                    
+                else{
+                    std::cout << "ERROR : Equation required : " << completeToken << std::endl;    
                 }
             }
             else{
-                std::cout << "ERROR : Equation required : " << completeToken << std::endl;    
+                std::cout << "ERROR : Invalid Token : " << completeToken << std::endl;
             }
         }
-        else{
-            std::cout << "ERROR : Invalid Token : " << completeToken << std::endl;
-        }
     }
-}
 
+    void processSubsubtoken(std::string line){
+        if(line[0] == '-' && line[1] == '-'){
+                std::string completeToken = processTheWord(line,2);
+                
+                const char* title = "title";
+                const char* type = "type";
+                const char* element = "element";
+                
+                bool titleToken = true;
+                bool typeToken = true;
+                bool elementToken = true;
 
+                for (size_t i = 0; i < 5; i++)
+                {
+                    if(completeToken[i] == title[i]){
+                        
+                    }
+                    else{
+                        titleToken = false;
+                        break;
+                    }
+                }
+                for (size_t i = 0; i < 4; i++)
+                {
+                    if(completeToken[i] == type[i]){
+                        
+                    }
+                    else{
+                        typeToken = false;
+                        break;
+                    }
+                }
+                for (size_t i = 0; i < 7; i++)
+                {
+                    if(completeToken[i] == element[i]){
+                        
+                    }
+                    else{
+                        elementToken = false;
+                        break;
+                    }
+                }
+
+                if((!titleToken && !typeToken && !elementToken) || outputDefinitions && elementToken){
+                    std::cout << "ERROR : Invalid Token : " << completeToken << std::endl;
+                }
+                else{
+                    bool goOn = false;
+
+                    int index = 0;
+
+                    if(titleToken){
+                        if(line[8] == ':'){
+                            goOn = true;
+                            index = 8+2;
+                        }
+                    }
+                    if(typeToken){
+                        if(line[7] == ':'){
+                            goOn = true;
+                            index = 7+2;
+                        }
+                    }
+                    if(elementToken){
+                        if(line[10] == ':'){
+                            goOn = true;
+                            index = 10+2;
+                        }
+                    }
+
+                    if(goOn){
+                        std::string attribute;
+                        attribute = processTheWord(line,index);
+
+                        if(titleToken){
+                            if(inputDefinitions)
+                                node.inputs[currentInputIndex].title = attribute.c_str();
+                            if(outputDefinitions)
+                                node.outputs[currentOutputIndex].title = attribute.c_str();
+                        }
+                        if(typeToken){
+                            if(inputDefinitions)
+                                node.inputs[currentInputIndex].type = attribute.c_str();
+                            if(outputDefinitions)
+                                node.outputs[currentOutputIndex].type = attribute.c_str();
+                        }
+                        if(elementToken){
+                            if(inputDefinitions)
+                                node.inputs[currentInputIndex].element = attribute.c_str();
+                        }
+
+                    }
+                    else{
+                        std::cout << "ERROR : ':' Expected " << line << std::endl;
+                    }
+                }
+            }
+    }
 };
 
 #endif
