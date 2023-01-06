@@ -7,8 +7,68 @@
 #include <vector>
 #include <string>
 
-bool attributes = false;
+class processNode
+{
+public:
+
+std::string processNodeFile(const char* filePath){
+    std::ifstream filein(filePath);
+
+    std::string completeFile;
+
+    std::string codeFile;
+
+    std::string completeToken;
+
+    int i = 0;
+    int stateChanged = 0;
+    for (std::string line; std::getline(filein, line);) 
+    {
+        completeFile += line;
+        
+        if(line[0] == '$'){ //Major tokens
+            completeToken = processTheWord(line,1);
+            if(completeToken == "attributes"){
+                attributes = true;
+                code = false;
+                stateChanged = i;
+            }
+            else if(completeToken == "code"){
+                attributes = false;
+                code = true;
+                stateChanged = i;
+            }
+            else{
+                std::cout << "ERROR : Invalid Preindicator : " << completeToken << std::endl;
+                break;
+            }
+        }
+
+        if(attributes && i != stateChanged){ //Subtokens
+            processSubToken(line);
+            stateChanged = i;
+        }
+
+        if((inputDefinitions || outputDefinitions) && i != stateChanged){ //Subsubtokens
+
+        }
+
+        if(code && i != stateChanged){
+            codeFile += line;
+        }
+
+        i++;
+    }
+}
+
+private:
+
+    bool attributes = false;
 bool code = false;
+
+bool inputDefinitions = false;
+bool outputDefinitions = false;
+
 
 bool uniformDefinitions = false;
 
@@ -19,7 +79,6 @@ struct NodeInput{
 };
 struct NodeOutput{
     const char * title; //"Color"
-    const char * element;//"Color picker or range slide bar"
     const char * type; //Sampler2D, vec3 , vec2 , float 
 };
 struct Node{
@@ -59,7 +118,7 @@ std::string processTheWord(std::string line, int startingIndex){
     
     std::string word;
 
-    while(line[i] != ' '){
+    while(line[i] != ' ' || !std::isdigit(line[i])){
         word += line[i];
         i++;
     }
@@ -135,14 +194,44 @@ void processSubToken(std::string line){
                     node.color[1] = value[1];//G
                     node.color[2] = value[2];//B
                 }
-                if(completeToken == "input_"){
+                const int maxInputCount = 60;
+                for (size_t i = 0; i < 60; i++)
+                {
+                    if(completeToken == "input_" + std::to_string(i)){
+                        if(node.inputs.size() < i){
+                            std::cout << "ERROR : Wrong index : " << completeToken << std::endl;
+                        }
+                        else{
+                            NodeInput input;
+                            //Default input values
+                            input.element = "none";
+                            input.title = completeToken.c_str();
+                            input.type = "float";
+                            node.inputs.push_back(input);
 
-                }
-                if(completeToken == "output_"){
+                            inputDefinitions = true;
+                        }
+                    }
 
+                    if(completeToken == "output_" + std::to_string(i)){
+                        if(node.outputs.size() < i){
+                            std::cout << "ERROR : Wrong index : " << completeToken << std::endl;
+                        }
+                        else{
+                            NodeOutput output;
+                            //Default output values
+                            output.title = completeToken.c_str();
+                            output.type = "float";
+                            node.outputs.push_back(output);
+
+                            outputDefinitions = true;
+
+                        }
+
+                    }
                 }
                 if(completeToken == "uniforms"){
-
+                    
                 }
             }
             else{
@@ -155,48 +244,7 @@ void processSubToken(std::string line){
     }
 }
 
-std::string processNodeFile(const char* filePath){
-    std::ifstream filein(filePath);
 
-    std::string completeFile;
+};
 
-    std::string codeFile;
-
-    std::string completeToken;
-
-    int i = 0;
-    int stateChanged = 0;
-    for (std::string line; std::getline(filein, line);) 
-    {
-        completeFile += line;
-        
-        if(line[0] == '$'){ //Check tokens
-            completeToken = processTheWord(line,1);
-            if(completeToken == "attributes"){
-                attributes = true;
-                code = false;
-                stateChanged = i;
-            }
-            else if(completeToken == "code"){
-                attributes = false;
-                code = true;
-                stateChanged = i;
-            }
-            else{
-                std::cout << "ERROR : Invalid Preindicator : " << completeToken << std::endl;
-                break;
-            }
-        }
-
-        if(attributes && i != stateChanged){
-            processSubToken(line);
-        }
-
-        if(code && i != stateChanged){
-            codeFile += line;
-        }
-
-        i++;
-    }
-}
 #endif
