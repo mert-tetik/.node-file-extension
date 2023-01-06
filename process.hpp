@@ -7,6 +7,8 @@
 #include <vector>
 #include <string>
 
+//TODO : Create the code
+
 class processNode
 {
 public:
@@ -247,7 +249,7 @@ private:
                         }
                     }
                     if(completeToken == "uniforms"){
-
+                        //TODO : Complete uniforms
                     }
                 }
                 else{
