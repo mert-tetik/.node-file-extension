@@ -1,10 +1,10 @@
 #ifndef PROCESSNODE_HPP
 #define PROCESSNODE_HPP
 
-
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <map>
 #include <string>
 
 //TODO : Create the code
@@ -13,7 +13,7 @@ class processNode
 {
 public:
 
-std::string processNodeFile(const char* filePath){
+std::string processNodeFile(std::string filePath){
     std::ifstream filein(filePath);
 
     std::string completeFile;
@@ -57,15 +57,13 @@ std::string processNodeFile(const char* filePath){
         if((inputDefinitions || outputDefinitions) && i != stateChanged){ //Subsubtokens
             processSubsubtoken(line);
         }
-        if(i != stateChanged){
-            inputDefinitions = false;
-            outputDefinitions = false;
-        }
 
 
 
         i++;
     }
+
+    createTheCode(codeFile);
 }
 
 private:
@@ -80,18 +78,18 @@ private:
     bool uniformDefinitions = false;
 
     struct NodeInput{
-        const char * title; //"Color"
-        const char * element;//"Color picker or range slide bar"
-        const char * type; //Sampler2D, vec3 , vec2 , float 
+        std::string title; //"Color"
+        std::string element;//"Color picker or range slide bar"
+        std::string type; //Sampler2D, vec3 , vec2 , float 
     };
     struct NodeOutput{
-        const char * title; //"Color"
-        const char * type; //Sampler2D, vec3 , vec2 , float 
+        std::string title; //"Color"
+        std::string type; //Sampler2D, vec3 , vec2 , float 
     };
     struct Node{
         std::vector<NodeInput> inputs;
         std::vector<NodeOutput> outputs;
-        const char* title;
+        std::string title;
 
         float color[4] = {20.f,20.f,20.f,100.f};
     };
@@ -99,33 +97,37 @@ private:
     Node node;
 
     struct Code{
-        std::vector<const char *> uniforms;
-        const char * code;
+        std::vector<std::string> uniforms;
+        std::string code;
     };
 
 
-    std::vector<const char *> inputTokens = {
+    std::vector<std::string> inputTokens = {
         "title",
         "element",
         "type"
     };
-    std::vector<const char *> outputTokens = {
+    std::vector<std::string> outputTokens = {
         "title",
         "type"
     };
-    std::vector<const char *> subTokens = {
+    std::vector<std::string> subTokens = {
         "input_",
         "output_",
         "title",
         "color",
         "uniforms"
     };
-    std::vector<const char *> tokens = {
+    std::vector<std::string> tokens = {
         "attributes",
         "code"
     };
 
-    std::vector<const char *> uniforms;
+    std::map<std::string,std::string> uniformData{
+        {"tex_coords","vec2"}, {"normal","vec3"}, {"pos","vec3"}
+    };
+
+    std::vector<std::string> uniforms;
 
     int currentInputIndex;
     int currentOutputIndex;
@@ -176,10 +178,10 @@ private:
     }
 
 
-    bool checkIfArrayContainsTheWord(std::vector<const char *> array, const char * word){
+    bool checkIfArrayContainsTheWord(std::vector<std::string> array, std::string word){
         bool result;
 
-        std::vector<const char *>::iterator foo;
+        std::vector<std::string>::iterator foo;
         foo = std::find(std::begin(array), std::end(array), word);
         if (foo != std::end(array)) {
             result = true;
@@ -227,6 +229,7 @@ private:
                                 node.inputs.push_back(input);
 
                                 inputDefinitions = true;
+                                outputDefinitions = false;
 
                                 currentInputIndex = i;
                             }
@@ -244,6 +247,7 @@ private:
                                 node.outputs.push_back(output);
 
                                 outputDefinitions = true;
+                                inputDefinitions = false;
 
                                 currentOutputIndex = i;
                             }
@@ -290,9 +294,9 @@ private:
         if(line[0] == '-' && line[1] == '-'){
                 std::string completeToken = processTheWord(line,2);
                 
-                const char* title = "title";
-                const char* type = "type";
-                const char* element = "element";
+                std::string title = "title";
+                std::string type = "type";
+                std::string element = "element";
                 
                 bool titleToken = true;
                 bool typeToken = true;
@@ -397,6 +401,39 @@ private:
         line.erase(commentIndex,line.size()-1);
 
         return line;
+    }
+
+    std::string createTheCode(std::string code){
+        std::string version = "#version 330 core \n";
+
+        std::string result;
+
+        result.append(version);
+
+        for (size_t i = 0; i < uniforms.size(); i++)
+        {
+            std::string type;
+
+            std::string in = "in " + uniformData[uniforms[i]] + ' ' + uniforms[i] + '\n';
+        }
+        
+        for (size_t i = 0; i < node.inputs.size(); i++)
+        {
+            std::string uniform = "uniform " + node.inputs[i].type + " input_" + std::to_string(i) + '\n';
+            result.append(uniform);
+        }
+        for (size_t i = 0; i < node.outputs.size(); i++)
+        {
+            std::string out = "layout(location=" + std::to_string(i) + ") out " + node.outputs[i].type + " output_" + std::to_string(i) + '\n';
+            result.append(out);
+        }
+        
+        result.append(code);
+
+        if(node.outputs.size() == 0){
+            std::cout << "WARNING : This node has no outputs" << std::endl;
+        }
+
     }
 };
 
