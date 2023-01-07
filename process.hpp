@@ -125,6 +125,8 @@ private:
         "code"
     };
 
+    std::vector<const char *> uniforms;
+
     int currentInputIndex;
     int currentOutputIndex;
 
@@ -133,7 +135,7 @@ private:
 
         std::string word;
 
-        while(line[i] != ' ' || !std::isdigit(line[i])){
+        while(line[i] != ' ' && line[i] != ';'){
             word += line[i];
             i++;
         }
@@ -198,7 +200,7 @@ private:
 
             if(properToken){
                 if(line[signIndex] == ':'){
-                    attribute = processTheWord(line,signIndex+1);
+                    attribute = processTheWord(line,signIndex+2);
 
                     if(completeToken == "title"){
                         node.title = attribute.c_str();
@@ -245,11 +247,10 @@ private:
 
                                 currentOutputIndex = i;
                             }
-
                         }
                     }
                     if(completeToken == "uniforms"){
-                        //TODO : Complete uniforms
+                        interpretTheUniforms(attribute);
                     }
                 }
                 else{
@@ -259,6 +260,29 @@ private:
             else{
                 std::cout << "ERROR : Invalid Token : " << completeToken << std::endl;
             }
+        }
+    }
+
+    void interpretTheUniforms(std::string attribute){
+        std::string currentWord;
+        int i = 0;
+
+        if(attribute[attribute.size()-1] == ';'){
+            while (attribute[i] != ';')
+            {
+                if(attribute[i] == '|'){
+                    uniforms.push_back(currentWord.c_str());
+                    currentWord = "";
+                    i++;
+                }
+                currentWord += attribute[i];
+                i++;
+            }
+            uniforms.push_back(currentWord.c_str());
+            currentWord = "";
+        }
+        else{
+            std::cout << "ERROR : ';' Expected : " << attribute << std::endl;
         }
     }
 

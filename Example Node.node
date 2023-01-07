@@ -2,29 +2,29 @@
 
 %attributes
 
--title : Example Node
--color : #981212
--opacity : 60
+-title : Example Node;
+-color : #981212;
+-opacity : 60;
 
 -input_1 : 
---type : vec3
---title : Albedo color
---object : picker
+--type : vec3;
+--title : Albedo color;
+--object : picker;
 
 -input_2 :
---type : sampler2D
---title : Texture
---object : none
+--type : sampler2D;
+--title : Texture;
+--object : none;
 
 -output_1 :
---type : sampler2D
---title : Image Out
+--type : sampler2D;
+--title : Image Out;
 
 -output_2 :
---type : vec3
---title : Color out
+--type : vec3;
+--title : Color out;
 
--uniforms tex_coords | normal | pos 
+-uniforms tex_coords | normal | pos;
 
 %code
 
