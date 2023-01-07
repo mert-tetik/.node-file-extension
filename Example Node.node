@@ -24,7 +24,7 @@
 --type : vec3;
 --title : Color out;
 
--uniforms tex_coords | normal | pos;
+-uniforms tex_coords|normal|pos;
 
 %code
 

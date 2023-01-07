@@ -7,8 +7,6 @@
 #include <map>
 #include <string>
 
-//TODO : Create the code
-
 class processNode
 {
 public:
@@ -117,6 +115,7 @@ private:
         "title",
         "color",
         "uniforms"
+        "opacity"
     };
     std::vector<std::string> tokens = {
         "attributes",
@@ -213,6 +212,9 @@ private:
                         node.color[1] = value[1];//G
                         node.color[2] = value[2];//B
                     }
+                    if(completeToken == "opacity"){
+                        node.color[3] = std::stoi(attribute);
+                    }   
                     const int maxInputCount = 60;
                     for (size_t i = 0; i < 60; i++)
                     {
@@ -268,6 +270,9 @@ private:
     }
 
     void interpretTheUniforms(std::string attribute){
+        
+        //TODO : Check if uniform is correct
+
         std::string currentWord;
         int i = 0;
 
