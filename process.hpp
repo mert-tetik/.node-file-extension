@@ -7,12 +7,36 @@
 #include <map>
 #include <string>
 
+struct ProcessHppNodeInput{
+    std::string title; //"Color"
+    std::string element;//"Color picker or range slide bar"
+    std::string type; //Sampler2D, vec3 , vec2 , float 
+};
+struct ProcessHppNodeOutput{
+    std::string title; //"Color"
+    std::string type; //Sampler2D, vec3 , vec2 , float 
+};
+struct ProcessHppNode{
+    std::vector<ProcessHppNodeInput> inputs;
+    std::vector<ProcessHppNodeOutput> outputs;
+    std::string title;
+    float color[4] = {20.f,20.f,20.f,100.f};
+    
+    std::string code;
+};
 class processNode
 {
 public:
 
-std::string processNodeFile(std::string filePath){
-    std::ifstream filein(filePath);
+ProcessHppNode processNodeFile(std::string filePath){
+    
+    
+    std::fstream filein;
+    filein.open(filePath.c_str());
+
+    if(!filein.is_open()){
+        std::cout << "Unable to open the file";
+    }
 
     std::string completeFile;
 
@@ -21,13 +45,17 @@ std::string processNodeFile(std::string filePath){
     std::string completeToken;
     int i = 0;
     int stateChanged = 0;
-    for (std::string line; std::getline(filein, line);) 
+    std::string line;
+    while(std::getline(filein,line))
     {
+
+
         completeFile += line;
         line = removeComments(line);
         
-        if(line[0] == '$'){ //Major tokens
+        if(line[0] == '%'){ //Major tokens
             completeToken = processTheWord(line,1);
+            
             if(completeToken == "attributes"){
                 attributes = true;
                 code = false;
@@ -46,13 +74,12 @@ std::string processNodeFile(std::string filePath){
 
         if(attributes && i != stateChanged){ //Subtokens
             processSubToken(line);
-            stateChanged = i;
         }
         if(code && i != stateChanged){
-            codeFile += line;
+            codeFile += line + '\n';
         }
 
-        if((inputDefinitions || outputDefinitions) && i != stateChanged){ //Subsubtokens
+        if((inputDefinitions || outputDefinitions)){ //Subsubtokens
             processSubsubtoken(line);
         }
 
@@ -60,8 +87,8 @@ std::string processNodeFile(std::string filePath){
 
         i++;
     }
-
     createTheCode(codeFile);
+    return processHppNode;
 }
 
 private:
@@ -75,30 +102,10 @@ private:
 
     bool uniformDefinitions = false;
 
-    struct NodeInput{
-        std::string title; //"Color"
-        std::string element;//"Color picker or range slide bar"
-        std::string type; //Sampler2D, vec3 , vec2 , float 
-    };
-    struct NodeOutput{
-        std::string title; //"Color"
-        std::string type; //Sampler2D, vec3 , vec2 , float 
-    };
-    struct Node{
-        std::vector<NodeInput> inputs;
-        std::vector<NodeOutput> outputs;
-        std::string title;
 
-        float color[4] = {20.f,20.f,20.f,100.f};
-    };
 
-    Node node;
 
-    struct Code{
-        std::vector<std::string> uniforms;
-        std::string code;
-    };
-
+    ProcessHppNode processHppNode;
 
     std::vector<std::string> inputTokens = {
         "title",
@@ -114,8 +121,10 @@ private:
         "output_",
         "title",
         "color",
-        "uniforms"
-        "opacity"
+        "uniforms",
+        "opacity",
+        "",
+        ""
     };
     std::vector<std::string> tokens = {
         "attributes",
@@ -188,6 +197,8 @@ private:
         else {
             result = false;
         }
+
+        return result;
     }
 
     void processSubToken(std::string line){
@@ -195,40 +206,55 @@ private:
             std::string completeToken = processTheWord(line,1);
             std::string attribute;
 
-            bool properToken = checkIfArrayContainsTheWord(subTokens,completeToken.c_str());
+            bool properToken = checkIfArrayContainsTheWord(subTokens,completeToken);
 
             const int signIndex = completeToken.size() + 2;
 
-            if(properToken){
+            bool tokenIsInputOrOutput = false;
+            for (size_t i = 0; i < 60; i++)
+            {
+                if(completeToken == "input_" + std::to_string(i)){
+                    tokenIsInputOrOutput = true;
+                    break;
+                }
+                if(completeToken == "output_" + std::to_string(i)){
+                   tokenIsInputOrOutput = true;
+                    break;
+                }
+            }
+
+            if(properToken || tokenIsInputOrOutput){
                 if(line[signIndex] == ':'){
-                    attribute = processTheWord(line,signIndex+2);
+                    if(!tokenIsInputOrOutput)
+                        attribute = processTheWord(line,signIndex+2);
+
 
                     if(completeToken == "title"){
-                        node.title = attribute.c_str();
+                        processHppNode.title = attribute.c_str();
                     }
                     if(completeToken == "color"){
                         float* value = hexToRGBConverter(attribute); 
-                        node.color[0] = value[0];//R
-                        node.color[1] = value[1];//G
-                        node.color[2] = value[2];//B
+                        processHppNode.color[0] = value[0];//R
+                        processHppNode.color[1] = value[1];//G
+                        processHppNode.color[2] = value[2];//B
                     }
                     if(completeToken == "opacity"){
-                        node.color[3] = std::stoi(attribute);
+                        processHppNode.color[3] = std::stoi(attribute);
                     }   
                     const int maxInputCount = 60;
                     for (size_t i = 0; i < 60; i++)
                     {
                         if(completeToken == "input_" + std::to_string(i)){
-                            if(node.inputs.size() < i){
+                            if(processHppNode.inputs.size() < i){
                                 std::cout << "ERROR : Wrong index : " << completeToken << std::endl;
                             }
                             else{
-                                NodeInput input;
+                                ProcessHppNodeInput input;
                                 //Default input values
                                 input.element = "none";
                                 input.title = completeToken.c_str();
                                 input.type = "float";
-                                node.inputs.push_back(input);
+                                processHppNode.inputs.push_back(input);
 
                                 inputDefinitions = true;
                                 outputDefinitions = false;
@@ -238,15 +264,15 @@ private:
                         }
 
                         if(completeToken == "output_" + std::to_string(i)){
-                            if(node.outputs.size() < i){
+                            if(processHppNode.outputs.size() < i){
                                 std::cout << "ERROR : Wrong index : " << completeToken << std::endl;
                             }
                             else{
-                                NodeOutput output;
+                                ProcessHppNodeOutput output;
                                 //Default output values
                                 output.title = completeToken.c_str();
                                 output.type = "float";
-                                node.outputs.push_back(output);
+                                processHppNode.outputs.push_back(output);
 
                                 outputDefinitions = true;
                                 inputDefinitions = false;
@@ -276,23 +302,18 @@ private:
         std::string currentWord;
         int i = 0;
 
-        if(attribute[attribute.size()-1] == ';'){
-            while (attribute[i] != ';')
-            {
-                if(attribute[i] == '|'){
-                    uniforms.push_back(currentWord.c_str());
-                    currentWord = "";
-                    i++;
-                }
-                currentWord += attribute[i];
+        while (i < attribute.size())
+        {
+            if(attribute[i] == '|'){
+                uniforms.push_back(currentWord.c_str());
+                currentWord = "";
                 i++;
             }
-            uniforms.push_back(currentWord.c_str());
-            currentWord = "";
+            currentWord += attribute[i];
+            i++;
         }
-        else{
-            std::cout << "ERROR : ';' Expected : " << attribute << std::endl;
-        }
+        uniforms.push_back(currentWord.c_str());
+        currentWord = "";
     }
 
     void processSubsubtoken(std::string line){
@@ -371,19 +392,19 @@ private:
 
                         if(titleToken){
                             if(inputDefinitions)
-                                node.inputs[currentInputIndex].title = attribute.c_str();
+                                processHppNode.inputs[currentInputIndex].title = attribute.c_str();
                             if(outputDefinitions)
-                                node.outputs[currentOutputIndex].title = attribute.c_str();
+                                processHppNode.outputs[currentOutputIndex].title = attribute.c_str();
                         }
                         if(typeToken){
                             if(inputDefinitions)
-                                node.inputs[currentInputIndex].type = attribute.c_str();
+                                processHppNode.inputs[currentInputIndex].type = attribute.c_str();
                             if(outputDefinitions)
-                                node.outputs[currentOutputIndex].type = attribute.c_str();
+                                processHppNode.outputs[currentOutputIndex].type = attribute.c_str();
                         }
                         if(elementToken){
                             if(inputDefinitions)
-                                node.inputs[currentInputIndex].element = attribute.c_str();
+                                processHppNode.inputs[currentInputIndex].element = attribute.c_str();
                         }
 
                     }
@@ -396,19 +417,20 @@ private:
 
     std::string removeComments(std::string line){
         const char commentChar = '#';
-        int commentIndex;
+        int commentIndex = 30000;
         for (size_t i = 0; i < line.size(); i++)
         {
             if(line[i] == commentChar){
                 commentIndex = i;
             }
         }
-        line.erase(commentIndex,line.size()-1);
+        if(commentIndex != 30000)
+            line.erase(commentIndex,line.size()-1);
 
         return line;
     }
 
-    std::string createTheCode(std::string code){
+    void createTheCode(std::string code){
         std::string version = "#version 330 core \n";
 
         std::string result;
@@ -419,26 +441,28 @@ private:
         {
             std::string type;
 
-            std::string in = "in " + uniformData[uniforms[i]] + ' ' + uniforms[i] + '\n';
+            std::string in = "in " + uniformData[uniforms[i]] + ' ' + uniforms[i] + ';' + '\n';
+            result.append(in);
         }
         
-        for (size_t i = 0; i < node.inputs.size(); i++)
+        for (size_t i = 0; i < processHppNode.inputs.size(); i++)
         {
-            std::string uniform = "uniform " + node.inputs[i].type + " input_" + std::to_string(i) + '\n';
+            std::string uniform = "uniform " + processHppNode.inputs[i].type + " input_" + std::to_string(i)+ ';' + '\n';
             result.append(uniform);
         }
-        for (size_t i = 0; i < node.outputs.size(); i++)
+        for (size_t i = 0; i < processHppNode.outputs.size(); i++)
         {
-            std::string out = "layout(location=" + std::to_string(i) + ") out " + node.outputs[i].type + " output_" + std::to_string(i) + '\n';
+            std::string out = "layout(location=" + std::to_string(i) + ") out " + processHppNode.outputs[i].type + " output_" + std::to_string(i) + ';' + '\n';
             result.append(out);
         }
         
         result.append(code);
 
-        if(node.outputs.size() == 0){
+        if(processHppNode.outputs.size() == 0){
             std::cout << "WARNING : This node has no outputs" << std::endl;
         }
 
+        processHppNode.code = result;
     }
 };
 
