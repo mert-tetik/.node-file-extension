@@ -9,12 +9,12 @@
 -input_0 : 
 --type : vec3;
 --title : Albedo color;
---object : picker;
+--element : picker;
 
 -input_1 :
 --type : sampler2D;
 --title : Texture;
---object : none;
+--element : none;
 
 -output_0 :
 --type : sampler2D;

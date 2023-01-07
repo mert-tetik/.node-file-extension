@@ -32,7 +32,7 @@ ProcessHppNode processNodeFile(std::string filePath){
     
     
     std::fstream filein;
-    filein.open(filePath.c_str());
+    filein.open(filePath);
 
     if(!filein.is_open()){
         std::cout << "Unable to open the file";
@@ -230,7 +230,7 @@ private:
 
 
                     if(completeToken == "title"){
-                        processHppNode.title = attribute.c_str();
+                        processHppNode.title = attribute;
                     }
                     if(completeToken == "color"){
                         float* value = hexToRGBConverter(attribute); 
@@ -252,7 +252,7 @@ private:
                                 ProcessHppNodeInput input;
                                 //Default input values
                                 input.element = "none";
-                                input.title = completeToken.c_str();
+                                input.title = completeToken;
                                 input.type = "float";
                                 processHppNode.inputs.push_back(input);
 
@@ -270,7 +270,7 @@ private:
                             else{
                                 ProcessHppNodeOutput output;
                                 //Default output values
-                                output.title = completeToken.c_str();
+                                output.title = completeToken;
                                 output.type = "float";
                                 processHppNode.outputs.push_back(output);
 
@@ -305,14 +305,14 @@ private:
         while (i < attribute.size())
         {
             if(attribute[i] == '|'){
-                uniforms.push_back(currentWord.c_str());
+                uniforms.push_back(currentWord);
                 currentWord = "";
                 i++;
             }
             currentWord += attribute[i];
             i++;
         }
-        uniforms.push_back(currentWord.c_str());
+        uniforms.push_back(currentWord);
         currentWord = "";
     }
 
@@ -392,19 +392,19 @@ private:
 
                         if(titleToken){
                             if(inputDefinitions)
-                                processHppNode.inputs[currentInputIndex].title = attribute.c_str();
+                                processHppNode.inputs[currentInputIndex].title = attribute;
                             if(outputDefinitions)
-                                processHppNode.outputs[currentOutputIndex].title = attribute.c_str();
+                                processHppNode.outputs[currentOutputIndex].title = attribute;
                         }
                         if(typeToken){
                             if(inputDefinitions)
-                                processHppNode.inputs[currentInputIndex].type = attribute.c_str();
+                                processHppNode.inputs[currentInputIndex].type = attribute;
                             if(outputDefinitions)
-                                processHppNode.outputs[currentOutputIndex].type = attribute.c_str();
+                                processHppNode.outputs[currentOutputIndex].type = attribute;
                         }
                         if(elementToken){
                             if(inputDefinitions)
-                                processHppNode.inputs[currentInputIndex].element = attribute.c_str();
+                                processHppNode.inputs[currentInputIndex].element = attribute;
                         }
 
                     }
