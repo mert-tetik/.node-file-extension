@@ -1,9 +1,16 @@
 #For ligidtools.com
 
+#All the proper elements
+#--none
+#--rangebar
+#--color
+#--curves
+
+
 %attributes;
 
--title : ExampleNode;
--color : 981212;
+-title : Example Node;
+-color : hex981212; #rgb122,124,66  #hsv86,45,23
 -opacity : 60;
 
 -input_0 : 
@@ -26,9 +33,26 @@
 
 -uniforms : tex_coords|normal|pos;
 
+#Not valid yet (example on a blur node)
+-listbox_0;
+--title_0 : gauss; #returns 0 if selected
+--title_1 : box; #returns 1 if selected
+
+-listbox_1;
+--title_0 : gauss; #returns 0 if selected
+--title_1 : box; #returns 1 if selected
+
 %code;
 
-void main(){
+void main (){
+    
+    if(listbox_0 == 0){
+        //Do something
+    }
+    else if(listbox_0 == 1){
+        //Do something different
+    }
+
     output_1 = Texture2D(input_2,tex_coords);
     output_2 = vec4(input_1,1.0);
 }
