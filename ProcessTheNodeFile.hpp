@@ -11,20 +11,23 @@ struct ProcessHppNodeInput{
     std::string title; //"Color"
     std::string element;//"Color picker or range slide bar"
     std::string type; //vec3 , vec2 , float 
+    std::string listIndex; //none,0,1,2,3,4
+    std::string list; //none,0,1,2,3,4
 };
-
-std::vector<std::vector<std::string>> lists;
-
 struct ProcessHppNodeOutput{
     std::string title; //"Color"
     std::string type; //vec3 , vec2 , float 
+    std::string listIndex; //none,0,1,2,3,4
+    std::string list; //none,0,1,2,3,4
 };
 struct ProcessHppNode{
     std::vector<ProcessHppNodeInput> inputs;
     std::vector<ProcessHppNodeOutput> outputs;
     std::string title;
-    float color[4] = {20.f,20.f,20.f,100.f};
+    std::vector<float> color = {20.f,20.f,20.f,100.f};
     
+    std::vector<std::vector<std::string>> lists;
+
     std::string code;
 };
 
@@ -47,13 +50,11 @@ ProcessHppNode processNodeFile(std::string filePath){
     std::string codeFile;
 
     std::string completeToken;
-    int i = 0;
+    int mainIndex = 0;
     int stateChanged = 0;
     std::string line;
     while(std::getline(filein,line))
     {
-
-
         completeFile += line;
         line = removeComments(line);
         
@@ -63,12 +64,12 @@ ProcessHppNode processNodeFile(std::string filePath){
             if(completeToken == "attributes"){
                 attributes = true;
                 code = false;
-                stateChanged = i;
+                stateChanged = mainIndex;
             }
             else if(completeToken == "code"){
                 attributes = false;
                 code = true;
-                stateChanged = i;
+                stateChanged = mainIndex;
             }
             else{
                 std::cout << "ERROR : Invalid Preindicator : " << completeToken << std::endl;
@@ -76,19 +77,17 @@ ProcessHppNode processNodeFile(std::string filePath){
             }
         }
 
-        if(attributes && i != stateChanged){ //Subtokens
+        if(attributes && mainIndex != stateChanged){ //Subtokens
             processSubToken(line);
         }
-        if(code && i != stateChanged){
+        if(code && mainIndex != stateChanged){
             codeFile += line + '\n';
         }
         if((inputDefinitions || outputDefinitions)){ //Subsubtokens
             processSubsubtoken(line);
         }
 
-
-
-        i++;
+        mainIndex++;
     }
     createTheCode(codeFile);
     return processHppNode;
@@ -115,10 +114,12 @@ private:
         "title",
         "element",
         "type"
+        "list_index"
     };
     std::vector<std::string> outputTokens = {
         "title",
         "type"
+        "list_index"
     };
     std::vector<std::string> subTokens = {
         "input_",
@@ -137,7 +138,7 @@ private:
     };
 
     std::map<std::string,std::string> uniformData{
-        {"tex_coords","vec2"}, {"normal","vec3"}, {"pos","vec3"}
+        {"tex_coords","vec2"}, {"normal","vec3"}, {"posScene","vec3"} , {"posModel","vec3"}
     };
 
     std::vector<std::string> uniforms;
@@ -169,7 +170,7 @@ private:
 
 
     //----------------------------------PROCESS THE COLORS----------------------------------
-    float* hexToRGBConverter(std::string hex){ //takes hex : #000000 (# is required) 
+    std::vector<float> hexToRGBConverter(std::string hex){ //takes hex : #000000 (# is required) 
     	float r;
     	float g;
     	float b;
@@ -197,74 +198,88 @@ private:
     	r = hexVal[0] * 16 + hexVal[1];
     	g = hexVal[2] * 16 + hexVal[3];
     	b = hexVal[4] * 16 + hexVal[5];
-    	float result[3] = {r,g,b};
+    	std::vector<float> result = {r,g,b};
     	return result;
     }
+    std::vector<float> hsvToRgbConverter(float H,float S,float V){
+        double r = 0, g = 0, b = 0;
 
-    float* hsvToRgbConverter(float h,float s,float v){
-	    float r,g,b;
+	    if (S == 0)
+	    {
+	    	r = V;
+	    	g = V;
+	    	b = V;
+	    }
+	    else
+	    {
+	    	int i;
+	    	double f, p, q, t;
 
-        unsigned char region, remainder, p, q, t;
+	    	if (H == 360)
+	    		H = 0;
+	    	else
+	    		H = H / 60;
 
-        if (v == 0)
-        {
-            r = v;
-            g = v;
-            b = v;
-            float result[3];
+	    	i = (int)trunc(H);
+	    	f = H - i;
 
-            result[0] = r;
-            result[1] = g;
-            result[2] = b;
-            return result;
-        }
+	    	p = V * (1.0 - S);
+	    	q = V * (1.0 - (S * f));
+	    	t = V * (1.0 - (S * (1.0 - f)));
 
-        region = v / 43;
-        remainder = (v - (region * 43)) * 6; 
+	    	switch (i)
+	    	{
+	    	case 0:
+	    		r = V;
+	    		g = t;
+	    		b = p;
+	    		break;
 
-        //ERROR : expression must have integral or uscoped enum type
-        p = (v * (255 - v)) >> 8;
-        q = (v * (255 - ((v * remainder) >> 8))) >> 8;
-        t = (v * (255 - ((v * (255 - remainder)) >> 8))) >> 8;
+	    	case 1:
+	    		r = q;
+	    		g = V;
+	    		b = p;
+	    		break;
 
-        switch (region)
-        {
-            case 0:
-                r = v; g = t; b = p;
-                break;
-            case 1:
-                r = q; g = v; b = p;
-                break;
-            case 2:
-                r = p; g = v; b = t;
-                break;
-            case 3:
-                r = p; g = q; b = v;
-                break;
-            case 4:
-                r = t; g = p; b = v;
-                break;
-            default:
-                r = v; g = p; b = q;
-                break;
-        }
+	    	case 2:
+	    		r = p;
+	    		g = V;
+	    		b = t;
+	    		break;
 
-        float result[3];
+	    	case 3:
+	    		r = p;
+	    		g = q;
+	    		b = V;
+	    		break;
 
-        result[0] = r;
-        result[1] = g;
-        result[2] = b;
+	    	case 4:
+	    		r = t;
+	    		g = p;
+	    		b = V;
+	    		break;
+
+	    	default:
+	    		r = V;
+	    		g = p;
+	    		b = q;
+	    		break;
+	    	}
+
+	    }
+        // std::cout << r*255 << ' ' << g*255 << ' ' << b*255 << ' ';
+        std::vector<float> result = {(float)r*255.f , (float)g*255.f , (float)b*255.f};
         return result;
     }
+
     void processTheColors(std::string line, std::string attribute,int attributeIndex){
         //Process the color type (hex , rgb , hsv)
         std::string colorType;
-        for(int i = 0; i < 4; i++){
+        for(int i = 0; i < 3; i++){
             colorType += attribute[i];
         }
         //Process the color value
-        
-        float* value;
+        std::vector<float> value;
         if(colorType == "hex"){
             //Process the hex value
             std::string colorValue = processTheWord(line,attributeIndex + 3,false,';'); 
@@ -321,6 +336,8 @@ private:
             std::string completeToken = processTheWord(line,1,true,';');
             
             std::string attribute;
+            int attributeIndex = 0;
+
 
             bool properToken = checkIfArrayContainsTheWord(subTokens,completeToken);
 
@@ -337,7 +354,7 @@ private:
                    tokenIsInputOrOutputOrList = true;
                     break;
                 }
-                if(completeToken == "list_" + std::to_string(i)){
+                if(completeToken == "listbox_" + std::to_string(i)){
                    tokenIsInputOrOutputOrList = true;
                     break;
                 }
@@ -346,24 +363,24 @@ private:
 
             if(properToken || tokenIsInputOrOutputOrList){
                 if(line[signIndex] == ':'){
-                    if(!tokenIsInputOrOutputOrList)
+                    if(!tokenIsInputOrOutputOrList){
+                        //Process the index for the attribute
+                        while(line[signIndex + attributeIndex + 1] == ' '){
+                            attributeIndex++;
+                        }
+                        attributeIndex = signIndex + attributeIndex + 1;
 
-                    //Process the index for the attribute
-                    int attributeIndex = 0;
-                    //attributeIndex not defined
-                    while(line[signIndex + attributeIndex + 1] != ' '){
-                        attributeIndex++;
+                        //Attribute will contain spaces if the token is title
+                        if(completeToken == "title"){
+                            attribute = processTheWord(line,attributeIndex,true,';');
+                            processHppNode.title = attribute;
+                        }
+                        else{
+                            attribute = processTheWord(line,attributeIndex,false,';');
+                        }
                     }
-                    attributeIndex = signIndex + attributeIndex + 1;
 
-                    //Attribute will contain spaces if the token is title
-                    if(completeToken == "title"){
-                        attribute = processTheWord(line,attributeIndex,true,';');
-                        processHppNode.title = attribute;
-                    }
-                    else{
-                        attribute = processTheWord(line,attributeIndex,false,';');
-                    }
+                    
 
 
 
@@ -410,13 +427,13 @@ private:
                                 std::vector<std::string> list;
                                 //Default input values
                                 list.push_back("list_" + std::to_string(i));
-                                lists.push_back(list);
+                                processHppNode.lists.push_back(list);
 
                                 listDefinitions = true;
                                 inputDefinitions = false;
                                 outputDefinitions = false;
 
-                                currentInputIndex = i;
+                                currentListIndex = i;
                             }
                         }
 
@@ -446,14 +463,14 @@ private:
                     }
                 }
                 else{
-                    std::cout << "ERROR : Equation required : " << completeToken << std::endl;    
+                    std::cout << "ERROR : ':' required : " << line << std::endl;    
                 }
             }
             else{
                 std::cout << "ERROR : Invalid Token : " << completeToken << std::endl;
             }
         }
-    }
+    }  
 
     void interpretTheUniforms(std::string attribute){
         
@@ -479,71 +496,135 @@ private:
     void processSubsubtoken(std::string line){
         if(line[0] == '-' && line[1] == '-'){
                 std::string completeToken = processTheWord(line,2,true,';');
-                
-                //Process the token
-                bool titleToken = false;
-                bool typeToken = false;
-                bool elementToken = false;
+                if(!listDefinitions){
+                    //Process the token
+                    bool titleToken = false;
+                    bool typeToken = false;
+                    bool elementToken = false;
+                    bool listIndexToken = false;
+                    bool listToken = false;
 
-                if(completeToken == "title"){
-                    titleToken = true;
-                }
-                if(completeToken == "type"){
-                    typeToken = true;
-                }
-                if(completeToken == "element"){
-                    elementToken = true;
-                }
-                if((!titleToken && !typeToken && !elementToken) || outputDefinitions && elementToken){
-                    std::cout << "ERROR : Invalid Token : " << completeToken << std::endl;
-                }
+                    if(completeToken == "title"){
+                        titleToken = true;
+                    }
+                    if(completeToken == "type"){
+                        typeToken = true;
+                    }
+                    if(completeToken == "element"){
+                        elementToken = true;
+                    }
+                    if(completeToken == "list_index"){
+                        listIndexToken = true;
+                    }
+                    if(completeToken == "list"){
+                        listToken = true;
+                    }
 
+
+                    if((!titleToken && !typeToken && !elementToken && !listIndexToken && !listToken) || outputDefinitions && elementToken){
+                        std::cout << "ERROR : Invalid Token : " << completeToken << std::endl;
+                    }
+
+                    else{
+                        bool goOn = false;
+
+                        //
+                        int signIndex = completeToken.size()+3;
+                        if(line[signIndex] == ':'){
+                            goOn = true;
+                        }
+
+                        //Process the index for the attribute
+                        int attributeIndex = 0;
+                        while(line[signIndex + attributeIndex + 1] != ' '){
+                            attributeIndex++;
+                        }
+                        attributeIndex = signIndex + attributeIndex + 2;
+
+
+                        if(goOn){
+                            std::string attribute;
+                            if(titleToken){
+                                attribute = processTheWord(line,attributeIndex,false,';');
+                            }
+                            else{
+                                attribute = processTheWord(line,attributeIndex,true,';');
+                            }
+
+                            if(titleToken){
+                                if(inputDefinitions)
+                                    processHppNode.inputs[currentInputIndex].title = attribute;
+                                if(outputDefinitions)
+                                    processHppNode.outputs[currentOutputIndex].title = attribute;
+                            }
+                            if(typeToken){
+                                if(inputDefinitions)
+                                    processHppNode.inputs[currentInputIndex].type = attribute;
+                                if(outputDefinitions)
+                                    processHppNode.outputs[currentOutputIndex].type = attribute;
+                            }
+                            if(elementToken){
+                                if(inputDefinitions)
+                                    processHppNode.inputs[currentInputIndex].element = attribute;
+                            }
+                            if(listIndexToken){
+                                if(inputDefinitions)
+                                    processHppNode.inputs[currentInputIndex].listIndex = attribute;
+                                if(outputDefinitions)
+                                    processHppNode.outputs[currentOutputIndex].listIndex = attribute;
+                            }
+                            if(listToken){
+                                if(inputDefinitions)
+                                    processHppNode.inputs[currentInputIndex].list = attribute;
+                                if(outputDefinitions)
+                                    processHppNode.outputs[currentOutputIndex].list = attribute;
+                            }
+                            
+
+                        }
+                        else{
+                            std::cout << "ERROR : ':' Expected " << line << std::endl;
+                        }
+                    }
+                }
                 else{
-                    bool goOn = false;
+                    //List definitions
+                    int titleIndex = 10000;
 
-                    //
-                    int signIndex = completeToken.size()+2;
-                    if(line[signIndex] == ':'){
-                        goOn = true;
+                    const int maxSubSubTokenCount = 60;
+                    for(int i = 0; i < maxSubSubTokenCount; i++){
+                        if(completeToken == "title_" + std::to_string(i)){
+                            titleIndex = i;
+                            if(titleIndex == processHppNode.lists[currentListIndex].size())
+                                processHppNode.lists[currentListIndex].push_back(completeToken);
+                            else{
+                                std::cout << "ERROR : Invalid Index : " << completeToken + std::to_string(i) << std::endl;
+                            }
+                            break;
+                        }
+                     } 
+                    if(titleIndex == 10000){
+                        std::cout << "ERROR : Invalid Token : " << completeToken << std::endl;
                     }
                     
-                    //Process the index for the attribute
+                    //TODO : Check if has probleem
+                    const int signIndex = completeToken.size() + 3;
+
                     int attributeIndex = 0;
+                    
                     while(line[signIndex + attributeIndex + 1] != ' '){
                         attributeIndex++;
                     }
                     attributeIndex = signIndex + attributeIndex + 1;
+                    
+                    std::string attribute;
+                    
+                    attribute = processTheWord(line,attributeIndex,true,';');
 
+                    if(line[signIndex] == ':'){
+                        attribute = processTheWord(line,attributeIndex,false,';');
 
-                    if(goOn){
-                        std::string attribute;
-                        if(titleToken){
-                            attribute = processTheWord(line,attributeIndex,false,';');
-                        }
-                        else{
-                            attribute = processTheWord(line,attributeIndex,true,';');
-                        }
-
-                        if(titleToken){
-                            if(inputDefinitions)
-                                processHppNode.inputs[currentInputIndex].title = attribute;
-                            if(outputDefinitions)
-                                processHppNode.outputs[currentOutputIndex].title = attribute;
-                        }
-                        if(typeToken){
-                            if(inputDefinitions)
-                                processHppNode.inputs[currentInputIndex].type = attribute;
-                            if(outputDefinitions)
-                                processHppNode.outputs[currentOutputIndex].type = attribute;
-                        }
-                        if(elementToken){
-                            if(inputDefinitions)
-                                processHppNode.inputs[currentInputIndex].element = attribute;
-                        }
-
-                    }
-                    else{
-                        std::cout << "ERROR : ':' Expected " << line << std::endl;
+                        processHppNode.lists[currentListIndex][titleIndex] = attribute;
                     }
                 }
             }
@@ -581,12 +662,13 @@ private:
         
         for (size_t i = 0; i < processHppNode.inputs.size(); i++)
         {
-            std::string uniform = "uniform " + processHppNode.inputs[i].type + " input_" + std::to_string(i)+ ';' + '\n';
+            std::string uniform = "uniform sampler2D input_" + std::to_string(i)+ ';' + '\n';
             result.append(uniform);
         }
+        
         for (size_t i = 0; i < processHppNode.outputs.size(); i++)
         {
-            std::string out = "layout(location=" + std::to_string(i) + ") out " + processHppNode.outputs[i].type + " output_" + std::to_string(i) + ';' + '\n';
+            std::string out = "layout(location=" + std::to_string(i) + ") out " + "vec4" + " output_" + std::to_string(i) + ';' + '\n';
             result.append(out);
         }
         
